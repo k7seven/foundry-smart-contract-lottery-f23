@@ -24,6 +24,7 @@
 pragma solidity ^0.8.18;
 
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 /**
  * @title A sample Raffle Contract
@@ -31,10 +32,11 @@ import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interface
  * @notice This contract is for creating a sample raffle
  * @dev Implements Chainlink VRFv2
  */
-contract Raffle {
+contract Raffle is VRFConsumerBaseV2 {
     /** Errors */
     error Raffle__NotEnoughEthSent();
     error Raffle__NotEnoughTimeHasPassed();
+    error Raffle__TransferFailed()
 
     /** State Variables */
     // Constants
@@ -52,6 +54,7 @@ contract Raffle {
     // Mutables
     uint256 private s_lastTimeStamp;
     address payable[] private s_players;
+    address private s_recentWinner;
 
     /** Events */
     event EnteredRaffle(address indexed player);
@@ -60,15 +63,15 @@ contract Raffle {
     constructor(
         uint256 entranceFee,
         uint256 interval,
-        VRFCoordinatorV2Interface vrfCoordinator,
+        address vrfCoordinator,
         bytes32 gasLane,
         uint64 subscriptionId,
         uint32 callbackGasLimit
-    ) {
+    ) VRFConsumerBaseV2(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
-        i_vrfCoordinator = vrfCoordinator;
+        i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
@@ -92,6 +95,17 @@ contract Raffle {
             i_callbackGasLimit,
             NUM_WORDS
         );
+    }
+
+    function fullfillRandomWords(
+        uint256 requestId,
+        uint256[] memory randomWords
+    ) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable winner = s_players[indexOfWinner];
+        s_recentWinner = winner;
+        (bool success, ) = winner.call{value: address(this).balance}("");
+        if (!success) revert Raffle__TransferFailed();
     }
 
     /** Getter Functions */
