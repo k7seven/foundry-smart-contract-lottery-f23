@@ -13,3 +13,11 @@ This code is to create a proveably random smart contract lottery.
 3. We are going to be using Chainlink VRF and Chainlink Automation.
    1. Chainlink VRF -> Randomness
    2. Chainlink automation -> Time based trigger
+
+## Tests
+
+1. Write some deploy scripts
+2. Write our tests
+   1. Work on a local chain
+   2. Forked Testnet
+   3. Forked Mainnet
